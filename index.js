@@ -4,6 +4,8 @@ var path = require('path');
 var gutil = require('gulp-util');
 var PluginError = gutil.PluginError;
 var File = gutil.File;
+var SourceMapGenerator = require('source-map').SourceMapGenerator;
+var SourceMapConsumer = require('source-map').SourceMapConsumer;
 
 module.exports = function(fileName, opt){
   if (!fileName) throw new PluginError('gulp-concat',  'Missing fileName option for gulp-concat');
@@ -12,6 +14,8 @@ module.exports = function(fileName, opt){
 
   var buffer = [];
   var firstFile = null;
+  var sourceMap = new SourceMapGenerator({ file: fileName });
+  var offset = 0;
 
   function bufferContents(file){
     if (file.isNull()) return; // ignore
@@ -19,7 +23,41 @@ module.exports = function(fileName, opt){
 
     if (!firstFile) firstFile = file;
 
-    buffer.push(file.contents.toString('utf8'));
+    var fileContents = file.contents.toString('utf8');
+    var lines = fileContents.split('\n').length;
+    if (file.sourceMap) {
+      var upstreamSM = new SourceMapConsumer(file.sourceMap);
+      upstreamSM.eachMapping(function(mapping) {
+        sourceMap.addMapping({
+          generated: {
+              line: offset + mapping.generatedLine,
+              column: mapping.generatedColumn
+          },
+          original: {
+              line: mapping.originalLine,
+              column: mapping.originalColumn
+          },
+          source: file.relative
+        });
+      });
+    } else {
+      for (var i = 1; i <= lines; i++) {
+        sourceMap.addMapping({
+          generated: {
+              line: offset + i,
+              column: 0
+          },
+          original: {
+              line: i,
+              column: 0
+          },
+          source: file.relative
+        });
+      }
+    }
+    offset += lines;
+
+    buffer.push(fileContents);
   }
 
   function endStream(){
@@ -35,6 +73,7 @@ module.exports = function(fileName, opt){
       path: joinedPath,
       contents: new Buffer(joinedContents)
     });
+    joinedFile.sourceMap = JSON.parse(sourceMap.toString());
 
     this.emit('data', joinedFile);
     this.emit('end');
