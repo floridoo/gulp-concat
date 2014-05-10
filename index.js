@@ -28,6 +28,7 @@ module.exports = function(fileName, opt){
 
     if (file.sourceMap) {
       var lines = fileContents.split('\n').length;
+      var fileRelativePath = file.path.substr(file.cwd.length);
       if (file.sourceMap && file.sourceMap.mappings.length > 0) {
         var upstreamSM = new SourceMapConsumer(file.sourceMap);
         upstreamSM.eachMapping(function(mapping) {
@@ -40,10 +41,15 @@ module.exports = function(fileName, opt){
                 line: mapping.originalLine,
                 column: mapping.originalColumn
             },
-            source: file.relative,
+            source: mapping.source,
             name: mapping.name
           });
         });
+        if (upstreamSM.sourcesContent) {
+            upstreamSM.sourcesContent.forEach(function(sourceContent, index) {
+              sourceMap.setSourceContent(upstreamSM.sources[index], sourceContent);
+            });
+        }
       } else {
         for (var i = 1; i <= lines; i++) {
           sourceMap.addMapping({
@@ -55,11 +61,11 @@ module.exports = function(fileName, opt){
                 line: i,
                 column: 0
             },
-            source: file.relative
+            source: fileRelativePath
           });
         }
+        sourceMap.setSourceContent(fileRelativePath, file.sourceMap.sourcesContent[0]);
       }
-      sourceMap.setSourceContent(file.relative, file.sourceMap.sourcesContent[0]);
       offset += lines;
     }
   }
