@@ -28,7 +28,6 @@ module.exports = function(fileName, opt){
 
     if (file.sourceMap) {
       var lines = fileContents.split('\n').length;
-      var fileRelativePath = file.path.substr(file.cwd.length);
       if (file.sourceMap && file.sourceMap.mappings.length > 0) {
         var upstreamSM = new SourceMapConsumer(file.sourceMap);
         upstreamSM.eachMapping(function(mapping) {
@@ -61,10 +60,10 @@ module.exports = function(fileName, opt){
                 line: i,
                 column: 0
             },
-            source: fileRelativePath
+            source: file.relative
           });
         }
-        sourceMap.setSourceContent(fileRelativePath, file.sourceMap.sourcesContent[0]);
+        sourceMap.setSourceContent(file.relative, file.sourceMap.sourcesContent[0]);
       }
       offset += lines;
     }
