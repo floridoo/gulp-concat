@@ -40,10 +40,15 @@ module.exports = function(fileName, opt){
                 line: mapping.originalLine,
                 column: mapping.originalColumn
             },
-            source: file.relative,
+            source: mapping.source,
             name: mapping.name
           });
         });
+        if (upstreamSM.sourcesContent) {
+            upstreamSM.sourcesContent.forEach(function(sourceContent, index) {
+              sourceMap.setSourceContent(upstreamSM.sources[index], sourceContent);
+            });
+        }
       } else {
         for (var i = 1; i <= lines; i++) {
           sourceMap.addMapping({
@@ -58,8 +63,8 @@ module.exports = function(fileName, opt){
             source: file.relative
           });
         }
+        sourceMap.setSourceContent(file.relative, file.sourceMap.sourcesContent[0]);
       }
-      sourceMap.setSourceContent(file.relative, file.sourceMap.sourcesContent[0]);
       offset += lines;
     }
   }
